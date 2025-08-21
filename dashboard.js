@@ -20,14 +20,13 @@ import {
 
 
 // --- INICIALIZAÇÃO E CONFIGURAÇÃO DO FIREBASE ---
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyBgIySTsWkoylC2WEUgF_EGzt3JVy3UHw0",
-  authDomain: "lavanderia-clean-up.firebaseapp.com",
-  projectId: "lavanderia-clean-up",
-  storageBucket: "lavanderia-clean-up.firebasestorage.app",
-  messagingSenderId: "6383817947",
-  appId: "1:6383817947:web:9dca3543ad299afcd628fe",
+  apiKey: "SUA_API_KEY",
+  authDomain: "SEU_AUTH_DOMAIN",
+  projectId: "SEU_PROJECT_ID",
+  storageBucket: "SEU_STORAGE_BUCKET",
+  messagingSenderId: "SEU_MESSAGING_SENDER_ID",
+  appId: "SEU_APP_ID"
 };
 
 const app = initializeApp(firebaseConfig);
