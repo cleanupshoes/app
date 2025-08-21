@@ -21,12 +21,12 @@ import {
 
 // --- INICIALIZAÇÃO E CONFIGURAÇÃO DO FIREBASE ---
 const firebaseConfig = {
-  apiKey: "SUA_API_KEY",
-  authDomain: "SEU_AUTH_DOMAIN",
-  projectId: "SEU_PROJECT_ID",
-  storageBucket: "SEU_STORAGE_BUCKET",
-  messagingSenderId: "SEU_MESSAGING_SENDER_ID",
-  appId: "SEU_APP_ID"
+  apiKey: "AIzaSyD0rAIgby5QLjhri3OD_KuEBVLCRrtkobE",
+  authDomain: "cleanupshoes.firebaseapp.com",
+  projectId: "cleanupshoes",
+  storageBucket: "cleanupshoes.appspot.com",
+  messagingSenderId: "520346701564",
+  appId: "1:520346701564:web:fd13aedc5430b2e2a4d179"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -139,6 +139,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateDashboard() {
+        if(!startDateInput || !endDateInput) return; // Garante que os elementos existem
+        
         const startDate = new Date(startDateInput.value + 'T00:00:00');
         const endDate = new Date(endDateInput.value + 'T23:59:59');
 
@@ -167,6 +169,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderDetailsLists(sales, expenses) {
+        if(!salesDetailsList || !expensesDetailsList) return;
         salesDetailsList.innerHTML = '';
         if (sales.length > 0) {
             sales.forEach(order => {
