@@ -357,7 +357,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if(searchInput) searchInput.addEventListener('input', renderFilteredOrders);
 
     function renderFilteredOrders() {
-        console.log("Filtrando ordens..."); // MENSAGEM DE DIAGNÓSTICO
         if (!searchInput) return;
         const searchTerm = searchInput.value.toLowerCase();
         const filtered = allOrdersCache.filter(order => {
@@ -370,7 +369,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             return clientName.includes(searchTerm) || itemsMatch;
         });
-        console.log(`Encontradas ${filtered.length} ordens correspondentes.`); // MENSAGEM DE DIAGNÓSTICO
         renderOrderLists(filtered);
     }
 
