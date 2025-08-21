@@ -28,13 +28,12 @@ import {
 
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBgIySTsWkoylC2WEUgF_EGzt3JVy3UHw0",
-  authDomain: "lavanderia-clean-up.firebaseapp.com",
-  projectId: "lavanderia-clean-up",
-  storageBucket: "lavanderia-clean-up.firebasestorage.app",
-  messagingSenderId: "6383817947",
-  appId: "1:6383817947:web:9dca3543ad299afcd628fe",
-  measurementId: "G-QDB5FNBDWE"
+  apiKey: "AIzaSyD0rAIgby5QLjhri3OD_KuEBVLCRrtkobE",
+  authDomain: "cleanupshoes.firebaseapp.com",
+  projectId: "cleanupshoes",
+  storageBucket: "cleanupshoes.firebasestorage.app",
+  messagingSenderId: "520346701564",
+  appId: "1:520346701564:web:fd13aedc5430b2e2a4d179"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -522,3 +521,4 @@ document.addEventListener('DOMContentLoaded', () => {
         window.print();
     }
 });
+
