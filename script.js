@@ -27,11 +27,12 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 
+// --- INICIALIZAÇÃO E CONFIGURAÇÃO DO FIREBASE ---
 const firebaseConfig = {
   apiKey: "AIzaSyD0rAIgby5QLjhri3OD_KuEBVLCRrtkobE",
   authDomain: "cleanupshoes.firebaseapp.com",
   projectId: "cleanupshoes",
-  storageBucket: "cleanupshoes.firebasestorage.app",
+  storageBucket: "cleanupshoes.appspot.com",
   messagingSenderId: "520346701564",
   appId: "1:520346701564:web:fd13aedc5430b2e2a4d179"
 };
@@ -521,4 +522,3 @@ document.addEventListener('DOMContentLoaded', () => {
         window.print();
     }
 });
-
