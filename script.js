@@ -43,6 +43,10 @@ const db = getFirestore(app);
 
 const companyId = "oNor7X6GwkcgWtsvyL0Dg4tamwI3";
 
+// !!!!!!!!!! ADICIONE AQUI O UID DO DONO !!!!!!!!!!!
+// Use o mesmo UID que você colocou no arquivo dashboard.js
+const ownerUIDs = ["UID_DO_DONO_AQUI"];
+
 document.addEventListener('DOMContentLoaded', () => {
 
     // --- SELETORES DE ELEMENTOS ---
@@ -72,6 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const confirmModalText = document.getElementById('confirm-modal-text');
     const confirmCancelBtn = document.getElementById('confirm-cancel-btn');
     const confirmOkBtn = document.getElementById('confirm-ok-btn');
+    const dashboardLink = document.getElementById('dashboard-link');
 
     let allOrdersCache = [];
     let allCustomersCache = [];
@@ -80,10 +85,19 @@ document.addEventListener('DOMContentLoaded', () => {
     let unsubscribeFromOrders = null; 
     let unsubscribeFromCustomers = null;
     let confirmCallback = null;
+    let isOwner = false; // Variável para controlar se o usuário é dono
 
     // --- LÓGICA DE AUTENTICAÇÃO ---
     onAuthStateChanged(auth, (user) => {
         if (user) {
+            // Verifica se o UID do usuário está na lista de donos
+            isOwner = ownerUIDs.includes(user.uid);
+
+            if (dashboardLink) {
+                // Esconde o link do dashboard se não for dono
+                dashboardLink.style.display = isOwner ? 'flex' : 'none';
+            }
+
             if (loginSection) loginSection.classList.add('hidden');
             if (dashboardSection) dashboardSection.classList.remove('hidden');
             if(addOrderBtn) {
@@ -93,6 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
             listenToOrders();
             listenToCustomers();
         } else {
+            isOwner = false; // Reseta a permissão ao deslogar
             if (dashboardSection) dashboardSection.classList.add('hidden');
             if (loginSection) loginSection.classList.remove('hidden');
             if (unsubscribeFromOrders) unsubscribeFromOrders();
@@ -370,9 +385,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const card = document.createElement('div');
         card.className = 'bg-gray-900/70 p-4 rounded-lg shadow-lg border-l-4 ' + (order.status === 'em_aberto' ? 'border-yellow-400' : 'border-lime-500');
         const formattedDate = new Intl.DateTimeFormat('pt-BR', {dateStyle: 'short', timeStyle: 'short'}).format(order.dataEntrada.toDate());
-        const formattedValue = new Intl.NumberFormat('pt-BR', {style: 'currency', currency: 'BRL'}).format(order.valorTotal || order.valor);
+        const formattedValue = new Intl.DateTimeFormat('pt-BR', {style: 'currency', currency: 'BRL'}).format(order.valorTotal || order.valor);
         const itemsHtml = (order.items || []).map(item => `<div class="flex justify-between text-sm"><p>${item.service} (${item.item})</p><p>${new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(item.price)}</p></div>`).join('');
         const finishButtonHtml = order.status === 'em_aberto' ? `<button data-id="${order.id}" class="finish-btn flex items-center gap-1 bg-green-800/50 text-green-300 px-3 py-1 rounded-full text-sm font-semibold">Finalizar</button>` : '';
+        
+        // Apenas donos podem ver o botão de excluir
+        const deleteButtonHtml = isOwner ? `<button data-id="${order.id}" class="delete-btn text-red-400" title="Excluir Ordem"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5 3.25V4H2.75a.75.75 0 000 1.5h.3l.815 8.15A1.5 1.5 0 005.357 15h5.285a1.5 1.5 0 001.493-1.35l.815-8.15h.3a.75.75 0 000-1.5H11v-.75A2.25 2.25 0 008.75 1h-1.5A2.25 2.25 0 005 3.25zm2.25-.75a.75.75 0 00-.75.75V4h3V3.25a.75.75 0 00-.75-.75h-1.5z" clip-rule="evenodd" /></svg></button>` : '';
+
         card.innerHTML = `
             <div class="flex justify-between items-start">
                 <div><p class="font-bold text-lg">${order.nomeCliente}</p></div>
@@ -384,7 +403,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="flex justify-end items-center mt-4 space-x-2">
                 ${finishButtonHtml}
                 <button data-id="${order.id}" class="print-btn flex items-center gap-1 bg-gray-700 px-3 py-1 rounded-full text-sm font-semibold">Imprimir</button>
-                <button data-id="${order.id}" class="delete-btn text-red-400" title="Excluir Ordem"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5 3.25V4H2.75a.75.75 0 000 1.5h.3l.815 8.15A1.5 1.5 0 005.357 15h5.285a1.5 1.5 0 001.493-1.35l.815-8.15h.3a.75.75 0 000-1.5H11v-.75A2.25 2.25 0 008.75 1h-1.5A2.25 2.25 0 005 3.25zm2.25-.75a.75.75 0 00-.75.75V4h3V3.25a.75.75 0 00-.75-.75h-1.5z" clip-rule="evenodd" /></svg></button>
+                ${deleteButtonHtml}
             </div>`;
         return card;
     }
@@ -404,6 +423,10 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (error) { alert("Erro ao buscar dados para impressão."); }
         }
         if (deleteBtn) {
+            // A verificação 'isOwner' já previne o botão de ser clicado por quem não deve,
+            // mas podemos adicionar uma segurança extra se quisermos.
+            if (!isOwner) return alert("Você não tem permissão para excluir ordens.");
+            
             showConfirm("Tem certeza que deseja excluir esta ordem?", async () => {
                 try { await deleteDoc(doc(db, 'orders', deleteBtn.dataset.id)); }
                 catch (error) { alert("Erro ao excluir a ordem."); }
