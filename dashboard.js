@@ -2,7 +2,7 @@
   Arquivo de Scripts para a página de dashboard financeiro.
 */
 
-// --- IMPORTAÇÕES DO FIREBASE (Sintaxe Moderna v9+) ---
+// --- IMPORTAÇÕES DO FIREBASE ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { 
@@ -36,6 +36,12 @@ const db = getFirestore(app);
 // --- ID DA CONTA DA LOJA (COMPARTILHADO) ---
 const companyId = "oNor7X6GwkcgWtsvyL0Dg4tamwI3";
 
+// !!!!!!!!!! ADICIONE AQUI O UID DO DONO !!!!!!!!!!!
+// Substitua 'UID_DO_DONO_AQUI' pelo UID que você copiou do Firebase.
+// Se houver mais de um dono, adicione os UIDs separados por vírgula.
+// Ex: const ownerUIDs = ["oNor7X6GwkcgWtsvyL0Dg4tamwI3", "outroUIDdeDonoAqui"];
+const ownerUIDs = ["UID_DO_DONO_AQUI"]; 
+
 document.addEventListener('DOMContentLoaded', () => {
     
     // --- SELETORES DE ELEMENTOS ---
@@ -50,8 +56,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const expensesDetailsList = document.getElementById('expenses-details-list');
     const downloadReportBtn = document.getElementById('download-dashboard-report-btn');
     const commissionToggleBtn = document.getElementById('commission-toggle-btn');
-    
-    // Modal de Confirmação
     const confirmModal = document.getElementById('confirm-modal');
     const confirmModalContent = document.getElementById('confirm-modal-content');
     const confirmModalText = document.getElementById('confirm-modal-text');
@@ -69,14 +73,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- AUTENTICAÇÃO E CARREGAMENTO INICIAL ---
     onAuthStateChanged(auth, (user) => {
-        if (user) {
+        // VERIFICAÇÃO DE PERMISSÃO
+        if (user && ownerUIDs.includes(user.uid)) {
+            // Se for dono, continua e carrega os dados
             setInitialDateRange();
             listenToData();
         } else {
+            // Se não estiver logado ou não for dono, redireciona para a página principal
+            alert("Acesso negado. Esta área é restrita aos administradores.");
             window.location.href = 'index.html';
         }
     });
 
+    // ... (o restante do arquivo continua exatamente igual) ...
+    
     // --- LISTENERS DO FIREBASE ---
     function listenToData() {
         if (unsubscribeFromOrders) unsubscribeFromOrders();
@@ -139,7 +149,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateDashboard() {
-        if(!startDateInput || !endDateInput) return; // Garante que os elementos existem
+        if(!startDateInput || !endDateInput) return;
         
         const startDate = new Date(startDateInput.value + 'T00:00:00');
         const endDate = new Date(endDateInput.value + 'T23:59:59');
@@ -204,7 +214,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    // --- LÓGICA DE EXCLUSÃO DE DESPESA ---
     document.body.addEventListener('click', async (e) => {
         const deleteBtn = e.target.closest('.delete-expense-btn');
         if (deleteBtn) {
