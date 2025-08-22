@@ -357,18 +357,26 @@ document.addEventListener('DOMContentLoaded', () => {
     if(searchInput) searchInput.addEventListener('input', renderFilteredOrders);
 
     function renderFilteredOrders() {
+        console.log("Filtrando ordens..."); // MENSAGEM DE DIAGNÓSTICO
         if (!searchInput) return;
         const searchTerm = searchInput.value.toLowerCase();
         const filtered = allOrdersCache.filter(order => {
             const clientName = order.nomeCliente.toLowerCase();
+            
+            console.log(`Comparando "${searchTerm}" com cliente "${clientName}"`); // MENSAGEM DE DIAGNÓSTICO
+
             let itemsMatch = false;
             if (order.items && Array.isArray(order.items)) {
                 itemsMatch = order.items.some(item => item.item && item.item.toLowerCase().includes(searchTerm));
             } else if (order.modeloTenis) {
                 itemsMatch = order.modeloTenis.toLowerCase().includes(searchTerm);
             }
-            return clientName.includes(searchTerm) || itemsMatch;
+            
+            const isMatch = clientName.includes(searchTerm) || itemsMatch;
+            if(isMatch) console.log(" -> Encontrado!"); // MENSAGEM DE DIAGNÓSTICO
+            return isMatch;
         });
+        console.log(`Encontradas ${filtered.length} ordens correspondentes.`); // MENSAGEM DE DIAGNÓSTICO
         renderOrderLists(filtered);
     }
 
