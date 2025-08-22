@@ -36,7 +36,7 @@ const db = getFirestore(app);
 // --- ID DA CONTA DA LOJA (COMPARTILHADO) ---
 const companyId = "oNor7X6GwkcgWtsvyL0Dg4tamwI3";
 
-// !!!!!!!!!! VERIFIQUE SE OS UIDs AQUI ESTÃO CORRETOS !!!!!!!!!!!
+// Lista de UIDs dos donos/administradores
 const ownerUIDs = ["c1TwOxGrjHVqi1GTDrN5AHD2BuQ2" , "ioAJqG9P9fMa9Oodog8Tldu83jM2"];
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -72,11 +72,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- AUTENTICAÇÃO E CARREGAMENTO INICIAL ---
     onAuthStateChanged(auth, (user) => {
-        
-        // ADICIONE AS DUAS LINHAS ABAIXO PARA DEPURAÇÃO
-        console.log("UID do usuário logado:", user ? user.uid : "Nenhum usuário logado");
-        console.log("Lista de donos no código:", ownerUIDs);
-
         // VERIFICAÇÃO DE PERMISSÃO
         if (user && ownerUIDs.includes(user.uid)) {
             // Se for dono, continua e carrega os dados
