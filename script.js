@@ -45,7 +45,7 @@ const companyId = "oNor7X6GwkcgWtsvyL0Dg4tamwI3";
 
 // !!!!!!!!!! ADICIONE AQUI O UID DO DONO !!!!!!!!!!!
 // Use o mesmo UID que você colocou no arquivo dashboard.js
-const ownerUIDs = ["UID_DO_DONO_AQUI"];
+const ownerUIDs = ["c1TwOxGrjHVqi1GTDrN5AHD2BuQ2" , "ioAJqG9P9fMa9Oodog8Tldu83jM2"];
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -465,3 +465,4 @@ document.addEventListener('DOMContentLoaded', () => {
         window.print();
     }
 });
+
