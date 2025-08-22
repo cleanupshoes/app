@@ -2,7 +2,7 @@
   Arquivo de Scripts para a página de dashboard financeiro.
 */
 
-// --- IMPORTAÇÕES DO FIREBASE ---
+// --- IMPORTAÇÕES DO FIREBASE (Sintaxe Moderna v9+) ---
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { 
@@ -36,11 +36,8 @@ const db = getFirestore(app);
 // --- ID DA CONTA DA LOJA (COMPARTILHADO) ---
 const companyId = "oNor7X6GwkcgWtsvyL0Dg4tamwI3";
 
-// !!!!!!!!!! ADICIONE AQUI O UID DO DONO !!!!!!!!!!!
-// Substitua 'UID_DO_DONO_AQUI' pelo UID que você copiou do Firebase.
-// Se houver mais de um dono, adicione os UIDs separados por vírgula.
-// Ex: const ownerUIDs = ["oNor7X6GwkcgWtsvyL0Dg4tamwI3", "outroUIDdeDonoAqui"];
-const ownerUIDs = ["c1TwOxGrjHVqi1GTDrN5AHD2BuQ2" , "ioAJqG9P9fMa9Oodog8Tldu83jM2"]; 
+// !!!!!!!!!! VERIFIQUE SE OS UIDs AQUI ESTÃO CORRETOS !!!!!!!!!!!
+const ownerUIDs = ["c1TwOxGrjHVqi1GTDrN5AHD2BuQ2" , "ioAJqG9P9fMa9Oodog8Tldu83jM2"];
 
 document.addEventListener('DOMContentLoaded', () => {
     
@@ -56,6 +53,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const expensesDetailsList = document.getElementById('expenses-details-list');
     const downloadReportBtn = document.getElementById('download-dashboard-report-btn');
     const commissionToggleBtn = document.getElementById('commission-toggle-btn');
+    
+    // Modal de Confirmação
     const confirmModal = document.getElementById('confirm-modal');
     const confirmModalContent = document.getElementById('confirm-modal-content');
     const confirmModalText = document.getElementById('confirm-modal-text');
@@ -73,6 +72,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- AUTENTICAÇÃO E CARREGAMENTO INICIAL ---
     onAuthStateChanged(auth, (user) => {
+        
+        // ADICIONE AS DUAS LINHAS ABAIXO PARA DEPURAÇÃO
+        console.log("UID do usuário logado:", user ? user.uid : "Nenhum usuário logado");
+        console.log("Lista de donos no código:", ownerUIDs);
+
         // VERIFICAÇÃO DE PERMISSÃO
         if (user && ownerUIDs.includes(user.uid)) {
             // Se for dono, continua e carrega os dados
@@ -85,8 +89,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // ... (o restante do arquivo continua exatamente igual) ...
-    
     // --- LISTENERS DO FIREBASE ---
     function listenToData() {
         if (unsubscribeFromOrders) unsubscribeFromOrders();
@@ -149,7 +151,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateDashboard() {
-        if(!startDateInput || !endDateInput) return;
+        if(!startDateInput || !endDateInput) return; // Garante que os elementos existem
         
         const startDate = new Date(startDateInput.value + 'T00:00:00');
         const endDate = new Date(endDateInput.value + 'T23:59:59');
@@ -214,6 +216,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
+    // --- LÓGICA DE EXCLUSÃO DE DESPESA ---
     document.body.addEventListener('click', async (e) => {
         const deleteBtn = e.target.closest('.delete-expense-btn');
         if (deleteBtn) {
