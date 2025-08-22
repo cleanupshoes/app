@@ -43,8 +43,7 @@ const db = getFirestore(app);
 
 const companyId = "oNor7X6GwkcgWtsvyL0Dg4tamwI3";
 
-// !!!!!!!!!! ADICIONE AQUI O UID DO DONO !!!!!!!!!!!
-// Use o mesmo UID que você colocou no arquivo dashboard.js
+// Lista de UIDs dos donos/administradores
 const ownerUIDs = ["c1TwOxGrjHVqi1GTDrN5AHD2BuQ2" , "ioAJqG9P9fMa9Oodog8Tldu83jM2"];
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -384,12 +383,18 @@ document.addEventListener('DOMContentLoaded', () => {
     function createOrderCard(order) {
         const card = document.createElement('div');
         card.className = 'bg-gray-900/70 p-4 rounded-lg shadow-lg border-l-4 ' + (order.status === 'em_aberto' ? 'border-yellow-400' : 'border-lime-500');
-        const formattedDate = new Intl.DateTimeFormat('pt-BR', {dateStyle: 'short', timeStyle: 'short'}).format(order.dataEntrada.toDate());
-        const formattedValue = new Intl.DateTimeFormat('pt-BR', {style: 'currency', currency: 'BRL'}).format(order.valorTotal || order.valor);
+        
+        // ##### CORREÇÃO DA DATA #####
+        // Verifica se a data de entrada existe e é válida antes de formatar
+        let formattedDate = 'Data indisponível';
+        if (order.dataEntrada && typeof order.dataEntrada.toDate === 'function') {
+            formattedDate = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(order.dataEntrada.toDate());
+        }
+
+        const formattedValue = new Intl.NumberFormat('pt-BR', {style: 'currency', currency: 'BRL'}).format(order.valorTotal || order.valor);
         const itemsHtml = (order.items || []).map(item => `<div class="flex justify-between text-sm"><p>${item.service} (${item.item})</p><p>${new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(item.price)}</p></div>`).join('');
         const finishButtonHtml = order.status === 'em_aberto' ? `<button data-id="${order.id}" class="finish-btn flex items-center gap-1 bg-green-800/50 text-green-300 px-3 py-1 rounded-full text-sm font-semibold">Finalizar</button>` : '';
         
-        // Apenas donos podem ver o botão de excluir
         const deleteButtonHtml = isOwner ? `<button data-id="${order.id}" class="delete-btn text-red-400" title="Excluir Ordem"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5 3.25V4H2.75a.75.75 0 000 1.5h.3l.815 8.15A1.5 1.5 0 005.357 15h5.285a1.5 1.5 0 001.493-1.35l.815-8.15h.3a.75.75 0 000-1.5H11v-.75A2.25 2.25 0 008.75 1h-1.5A2.25 2.25 0 005 3.25zm2.25-.75a.75.75 0 00-.75.75V4h3V3.25a.75.75 0 00-.75-.75h-1.5z" clip-rule="evenodd" /></svg></button>` : '';
 
         card.innerHTML = `
@@ -423,8 +428,6 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (error) { alert("Erro ao buscar dados para impressão."); }
         }
         if (deleteBtn) {
-            // A verificação 'isOwner' já previne o botão de ser clicado por quem não deve,
-            // mas podemos adicionar uma segurança extra se quisermos.
             if (!isOwner) return alert("Você não tem permissão para excluir ordens.");
             
             showConfirm("Tem certeza que deseja excluir esta ordem?", async () => {
@@ -465,4 +468,3 @@ document.addEventListener('DOMContentLoaded', () => {
         window.print();
     }
 });
-
