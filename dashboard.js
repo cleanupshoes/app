@@ -40,7 +40,7 @@ const companyId = "oNor7X6GwkcgWtsvyL0Dg4tamwI3";
 // Substitua 'UID_DO_DONO_AQUI' pelo UID que você copiou do Firebase.
 // Se houver mais de um dono, adicione os UIDs separados por vírgula.
 // Ex: const ownerUIDs = ["oNor7X6GwkcgWtsvyL0Dg4tamwI3", "outroUIDdeDonoAqui"];
-const ownerUIDs = ["UID_DO_DONO_AQUI"]; 
+const ownerUIDs = ["c1TwOxGrjHVqi1GTDrN5AHD2BuQ2" , "ioAJqG9P9fMa9Oodog8Tldu83jM2"]; 
 
 document.addEventListener('DOMContentLoaded', () => {
     
