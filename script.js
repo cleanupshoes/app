@@ -1,6 +1,6 @@
 /*
   Arquivo de Scripts para o sistema Clean UP Shoes
-  Responsável pela interatividade da página de Ordens de Serviço.
+  Responsável pela interatividade da página de Ordens de Serviço (index.html).
 */
 
 // --- IMPORTAÇÕES DO FIREBASE ---
@@ -41,7 +41,6 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// --- ID DA CONTA DA LOJA (COMPARTILHADO) ---
 const companyId = "oNor7X6GwkcgWtsvyL0Dg4tamwI3";
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -56,8 +55,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const finishedOrdersList = document.getElementById('finished-orders-list');
     const printArea = document.getElementById('print-area');
     const searchInput = document.getElementById('search-input');
-
-    // Modal de Nova Ordem
     const newOrderModal = document.getElementById('new-order-modal');
     const modalContent = document.getElementById('modal-content');
     const closeModalBtn = document.getElementById('close-modal-btn');
@@ -70,21 +67,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const serviceItemsContainer = document.getElementById('service-items-container');
     const addServiceBtn = document.getElementById('add-service-btn');
     const totalValueDisplay = document.getElementById('total-value-display');
-    
-    // Modal de Confirmação
     const confirmModal = document.getElementById('confirm-modal');
     const confirmModalContent = document.getElementById('confirm-modal-content');
     const confirmModalText = document.getElementById('confirm-modal-text');
     const confirmCancelBtn = document.getElementById('confirm-cancel-btn');
     const confirmOkBtn = document.getElementById('confirm-ok-btn');
 
-    let unsubscribeFromOrders = null; 
-    let unsubscribeFromCustomers = null;
-    let confirmCallback = null;
     let allOrdersCache = [];
     let allCustomersCache = [];
     let currentOrderItems = [];
     let selectedCustomerData = null;
+    let unsubscribeFromOrders = null; 
+    let unsubscribeFromCustomers = null;
+    let confirmCallback = null;
 
     // --- LÓGICA DE AUTENTICAÇÃO ---
     onAuthStateChanged(auth, (user) => {
@@ -105,19 +100,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    if(loginForm) loginForm.addEventListener('submit', async (e) => {
+    if (loginForm) loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         try {
             await signInWithEmailAndPassword(auth, loginForm.email.value, loginForm.password.value);
         } catch (error) {
-            console.error("Erro de login:", error.code);
             alert('E-mail ou senha inválidos.');
         }
     });
 
-    if(logoutBtn) logoutBtn.addEventListener('click', () => signOut(auth));
+    if (logoutBtn) logoutBtn.addEventListener('click', () => signOut(auth));
 
-    // --- LÓGICA DOS MODAIS ---
+    // --- LÓGICA GERAL E FUNÇÕES AUXILIARES ---
     function openModal(modal, content) {
         if (!modal || !content) return;
         modal.classList.remove('hidden');
@@ -130,41 +124,52 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => modal.classList.add('hidden'), 200);
     }
 
-    if(addOrderBtn) addOrderBtn.addEventListener('click', () => {
-        openModal(newOrderModal, modalContent);
-        resetNewOrderForm();
-    });
-    if(closeModalBtn) closeModalBtn.addEventListener('click', () => closeModal(newOrderModal, modalContent));
-    if(cancelModalBtn) cancelModalBtn.addEventListener('click', () => closeModal(newOrderModal, modalContent));
-
     function showConfirm(message, callback) {
         if(confirmModalText) confirmModalText.textContent = message;
         confirmCallback = callback;
         openModal(confirmModal, confirmModalContent);
     }
+
+    // --- EVENTOS DE MODAIS ---
+    if(addOrderBtn) addOrderBtn.addEventListener('click', () => {
+        resetNewOrderForm();
+        openModal(newOrderModal, modalContent);
+    });
+    if(closeModalBtn) closeModalBtn.addEventListener('click', () => closeModal(newOrderModal, modalContent));
+    if(cancelModalBtn) cancelModalBtn.addEventListener('click', () => closeModal(newOrderModal, modalContent));
     if(confirmCancelBtn) confirmCancelBtn.addEventListener('click', () => closeModal(confirmModal, confirmModalContent));
     if(confirmOkBtn) confirmOkBtn.addEventListener('click', () => {
         if (confirmCallback) confirmCallback();
         closeModal(confirmModal, confirmModalContent);
     });
     
-    // --- LÓGICA DE CLIENTES ---
+    // --- LÓGICA DE DADOS (FIREBASE LISTENERS) ---
     function listenToCustomers() {
         if (unsubscribeFromCustomers) unsubscribeFromCustomers();
         const q = query(collection(db, "customers"), where("ownerId", "==", companyId), orderBy("name"));
         unsubscribeFromCustomers = onSnapshot(q, (snapshot) => {
             allCustomersCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            if(addOrderBtn) {
+            if (addOrderBtn) {
                 addOrderBtn.disabled = false;
                 addOrderBtn.classList.remove('opacity-50', 'cursor-not-allowed');
             }
         });
     }
 
+    function listenToOrders() {
+        if (unsubscribeFromOrders) unsubscribeFromOrders();
+        const q = query(collection(db, "orders"), where("ownerId", "==", companyId), orderBy("dataEntrada", "desc"));
+        unsubscribeFromOrders = onSnapshot(q, (snapshot) => {
+            allOrdersCache = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            renderFilteredOrders();
+        });
+    }
+
+    // --- LÓGICA DE BUSCA DE CLIENTES (NO MODAL) ---
     if(customerSearchInput) customerSearchInput.addEventListener('input', () => {
         const searchTerm = customerSearchInput.value.toLowerCase();
         customerSearchResults.innerHTML = '';
-        if (searchTerm.length === 0) {
+        if (!searchTerm) {
             customerSearchResults.classList.add('hidden');
             return;
         }
@@ -190,17 +195,12 @@ document.addEventListener('DOMContentLoaded', () => {
             customerSearchInput.value = e.target.textContent;
             selectedCustomerIdInput.value = e.target.dataset.id;
             clientPhoneInput.value = e.target.dataset.phone;
-            selectedCustomerData = {
-                id: e.target.dataset.id,
-                name: e.target.textContent,
-                phone: e.target.dataset.phone,
-                cpf: e.target.dataset.cpf
-            };
+            selectedCustomerData = allCustomersCache.find(c => c.id === e.target.dataset.id);
             customerSearchResults.classList.add('hidden');
         }
     });
 
-    // --- LÓGICA DE ORDENS DE SERVIÇO ---
+    // --- LÓGICA DO FORMULÁRIO DE NOVA ORDEM ---
     function resetNewOrderForm() {
         if(newOrderForm) newOrderForm.reset();
         if(customerSearchInput) customerSearchInput.value = '';
@@ -208,7 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if(clientPhoneInput) clientPhoneInput.value = '';
         selectedCustomerData = null;
         currentOrderItems = [];
-        addServiceItem(); // Adiciona o primeiro item em branco
+        addServiceItem();
     }
     
     function addServiceItem() {
@@ -223,9 +223,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateServiceItem(index, field, value) {
         currentOrderItems[index][field] = value;
-        if (field === 'price') {
-            calculateTotal();
-        }
+        if (field === 'price') calculateTotal();
     }
     
     function calculateTotal() {
@@ -256,70 +254,59 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
                 <div>
                     <label class="block text-sm font-medium text-gray-400">Valor (R$)</label>
-                    <input type="number" data-index="${index}" class="service-value-input w-full px-4 py-2 mt-1 text-gray-200 bg-gray-700 border border-gray-600 rounded-lg" step="0.01" value="${item.price}" required>
+                    <input type="number" data-index="${index}" class="service-value-input w-full px-4 py-2 mt-1" value="${item.price}" required>
                 </div>
                 <div class="md:col-span-3">
                     <label class="block text-sm font-medium text-gray-400">Modelo do Tênis / Item</label>
-                    <input type="text" data-index="${index}" class="service-item-input w-full px-4 py-2 mt-1 text-gray-200 bg-gray-700 border border-gray-600 rounded-lg" value="${item.item}" required>
+                    <input type="text" data-index="${index}" class="service-item-input w-full px-4 py-2 mt-1" value="${item.item}" required>
                 </div>
-                ${currentOrderItems.length > 1 ? `<button type="button" data-index="${index}" class="remove-service-btn absolute top-2 right-2 text-red-400 hover:text-red-300">&times;</button>` : ''}
+                ${currentOrderItems.length > 1 ? `<button type="button" data-index="${index}" class="remove-service-btn absolute top-2 right-2 text-red-400">&times;</button>` : ''}
             `;
+            const valueInput = itemEl.querySelector('.service-value-input');
+            const typeSelect = itemEl.querySelector('.service-type-select');
+            typeSelect.value = item.service;
+            valueInput.readOnly = item.service && item.service !== 'Outro';
             serviceItemsContainer.appendChild(itemEl);
-            itemEl.querySelector('.service-type-select').value = item.service;
         });
         calculateTotal();
     }
 
     if(addServiceBtn) addServiceBtn.addEventListener('click', addServiceItem);
-
     if(serviceItemsContainer) {
         serviceItemsContainer.addEventListener('change', (e) => {
             const index = e.target.dataset.index;
             if (e.target.classList.contains('service-type-select')) {
                 const selectedOption = e.target.options[e.target.selectedIndex];
                 const price = selectedOption.dataset.price;
-                const valueInput = serviceItemsContainer.querySelector(`.service-value-input[data-index="${index}"]`);
-                
+                const valueInput = e.target.closest('.grid').querySelector('.service-value-input');
                 updateServiceItem(index, 'service', e.target.value);
-                
                 if (e.target.value === 'Outro') {
                     valueInput.value = '';
                     valueInput.readOnly = false;
                     valueInput.focus();
+                    updateServiceItem(index, 'price', 0);
                 } else {
                     valueInput.value = price;
                     valueInput.readOnly = true;
                     updateServiceItem(index, 'price', price);
                 }
             }
-            if (e.target.classList.contains('service-value-input')) {
-                updateServiceItem(index, 'price', e.target.value);
-            }
         });
-
         serviceItemsContainer.addEventListener('input', (e) => {
             const index = e.target.dataset.index;
-            if (e.target.classList.contains('service-item-input')) {
-                updateServiceItem(index, 'item', e.target.value);
-            }
+            if (e.target.classList.contains('service-value-input')) updateServiceItem(index, 'price', e.target.value);
+            if (e.target.classList.contains('service-item-input')) updateServiceItem(index, 'item', e.target.value);
         });
-
         serviceItemsContainer.addEventListener('click', (e) => {
-            if (e.target.classList.contains('remove-service-btn')) {
-                removeServiceItem(e.target.dataset.index);
-            }
+            if (e.target.classList.contains('remove-service-btn')) removeServiceItem(e.target.dataset.index);
         });
     }
 
     if(newOrderForm) newOrderForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         if (!selectedCustomerData) return alert("Por favor, selecione um cliente da lista.");
-        if (currentOrderItems.some(item => !item.service || !item.item)) {
-            return alert("Por favor, preencha todos os campos de serviço e item.");
-        }
-
+        if (currentOrderItems.some(item => !item.service || !item.item)) return alert("Preencha todos os campos de serviço e item.");
         const totalValue = currentOrderItems.reduce((sum, item) => sum + parseFloat(item.price || 0), 0);
-
         const newOrderData = {
             customerId: selectedCustomerData.id,
             nomeCliente: selectedCustomerData.name,
@@ -333,34 +320,22 @@ document.addEventListener('DOMContentLoaded', () => {
             status: 'em_aberto',
             ownerId: companyId
         };
-
         try {
             await addDoc(collection(db, "orders"), newOrderData);
             closeModal(newOrderModal, modalContent);
         } catch (error) {
-            console.error("Erro ao salvar ordem: ", error);
             alert("Ocorreu um erro ao salvar a ordem.");
         }
     });
 
-    // --- LISTENER, BUSCA E RENDERIZAÇÃO DE ORDENS ---
-    function listenToOrders() {
-        if (unsubscribeFromOrders) unsubscribeFromOrders();
-
-        const q = query(collection(db, "orders"), where("ownerId", "==", companyId), orderBy("dataEntrada", "desc"));
-        unsubscribeFromOrders = onSnapshot(q, (querySnapshot) => {
-            allOrdersCache = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            renderFilteredOrders();
-        }, (error) => console.error("Erro ao ouvir as ordens:", error));
-    }
-
+    // --- RENDERIZAÇÃO E BUSCA DAS ORDENS NO PAINEL PRINCIPAL ---
     if(searchInput) searchInput.addEventListener('input', renderFilteredOrders);
 
     function renderFilteredOrders() {
         if (!searchInput) return;
         const searchTerm = searchInput.value.toLowerCase();
         const filtered = allOrdersCache.filter(order => {
-            const clientName = order.nomeCliente.toLowerCase();
+            const clientName = (order.nomeCliente || '').toLowerCase();
             let itemsMatch = false;
             if (order.items && Array.isArray(order.items)) {
                 itemsMatch = order.items.some(item => item.item && item.item.toLowerCase().includes(searchTerm));
@@ -377,7 +352,6 @@ document.addEventListener('DOMContentLoaded', () => {
         openOrdersList.innerHTML = '';
         finishedOrdersList.innerHTML = '';
         let hasOpen = false, hasFinished = false;
-
         orders.forEach((order) => {
             const orderCard = createOrderCard(order);
             if (order.status === 'em_aberto') {
@@ -388,136 +362,82 @@ document.addEventListener('DOMContentLoaded', () => {
                 hasFinished = true;
             }
         });
-
-        if (!hasOpen) openOrdersList.innerHTML = '<p class="text-gray-400 p-4 bg-gray-900/50 rounded-lg shadow-sm">Nenhuma ordem de serviço em aberto.</p>';
-        if (!hasFinished) finishedOrdersList.innerHTML = '<p class="text-gray-400 p-4 bg-gray-900/50 rounded-lg shadow-sm">Nenhuma ordem de serviço finalizada.</p>';
+        if (!hasOpen) openOrdersList.innerHTML = '<p class="text-gray-400 p-4">Nenhuma ordem de serviço em aberto.</p>';
+        if (!hasFinished) finishedOrdersList.innerHTML = '<p class="text-gray-400 p-4">Nenhuma ordem de serviço finalizada.</p>';
     }
 
     function createOrderCard(order) {
         const card = document.createElement('div');
-        const statusClass = order.status === 'em_aberto' ? 'border-l-4 border-yellow-400' : 'border-l-4 border-lime-500';
-        card.className = `bg-gray-900/70 p-4 rounded-lg shadow-lg transition-all duration-300 hover:shadow-lime-500/10 hover:border-lime-400 ${statusClass}`;
-        
-        const dateObject = order.dataEntrada.toDate();
-        const formattedDate = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(dateObject);
-        const formattedValue = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(order.valorTotal || order.valor);
-
-        let itemsHtml = '';
-        if (order.items && Array.isArray(order.items)) {
-            itemsHtml = order.items.map(item => `
-                <div class="flex justify-between text-sm">
-                    <p class="text-gray-300">${item.service} (<span class="text-gray-400">${item.item}</span>)</p>
-                    <p class="text-gray-300">${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.price)}</p>
-                </div>
-            `).join('');
-        } else if (order.modeloTenis) {
-            itemsHtml = `
-                <div class="flex justify-between text-sm">
-                    <p class="text-gray-300">${order.tipoServico || 'Serviço'} (<span class="text-gray-400">${order.modeloTenis}</span>)</p>
-                </div>`;
-        }
-
-        let finishButtonHtml = '';
-        if (order.status === 'em_aberto') {
-            finishButtonHtml = `<button data-id="${order.id}" class="finish-btn flex items-center gap-1 bg-green-800/50 text-green-300 px-3 py-1 rounded-full hover:bg-green-700/50 text-sm font-semibold transition-colors"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-4 h-4"><path fill-rule="evenodd" d="M12.416 3.376a.75.75 0 0 1 .208 1.04l-5 7.5a.75.75 0 0 1-1.154.114l-3-3a.75.75 0 0 1 1.06-1.06l2.35 2.35 4.493-6.74a.75.75 0 0 1 1.04-.208Z" clip-rule="evenodd" /></svg>Finalizar</button>`;
-        }
-
+        card.className = 'bg-gray-900/70 p-4 rounded-lg shadow-lg border-l-4 ' + (order.status === 'em_aberto' ? 'border-yellow-400' : 'border-lime-500');
+        const formattedDate = new Intl.DateTimeFormat('pt-BR', {dateStyle: 'short', timeStyle: 'short'}).format(order.dataEntrada.toDate());
+        const formattedValue = new Intl.NumberFormat('pt-BR', {style: 'currency', currency: 'BRL'}).format(order.valorTotal || order.valor);
+        const itemsHtml = (order.items || []).map(item => `<div class="flex justify-between text-sm"><p>${item.service} (${item.item})</p><p>${new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(item.price)}</p></div>`).join('');
+        const finishButtonHtml = order.status === 'em_aberto' ? `<button data-id="${order.id}" class="finish-btn flex items-center gap-1 bg-green-800/50 text-green-300 px-3 py-1 rounded-full text-sm font-semibold">Finalizar</button>` : '';
         card.innerHTML = `
             <div class="flex justify-between items-start">
-                <div><p class="font-bold text-lg text-gray-200">${order.nomeCliente}</p></div>
+                <div><p class="font-bold text-lg">${order.nomeCliente}</p></div>
                 <p class="font-bold text-lg text-lime-400">${formattedValue}</p>
             </div>
             <div class="mt-2 space-y-1 border-t border-b border-gray-700 py-2">${itemsHtml}</div>
             <div class="text-sm text-gray-500 mt-2"><span>OS: ${order.id.substring(0, 6).toUpperCase()}</span> &bull; <span>Entrada: ${formattedDate}</span></div>
-            ${order.observacoes ? `<p class="text-sm mt-3 pt-3 border-t border-gray-700 text-gray-400">${order.observacoes}</p>` : ''}
+            ${order.observacoes ? `<p class="text-sm mt-3 pt-3 border-t border-gray-700">${order.observacoes}</p>` : ''}
             <div class="flex justify-end items-center mt-4 space-x-2">
                 ${finishButtonHtml}
-                <button data-id="${order.id}" class="print-btn flex items-center gap-1 bg-gray-700 text-gray-300 px-3 py-1 rounded-full hover:bg-gray-600 text-sm font-semibold transition-colors"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-4 h-4"><path d="M5 2.5a.5.5 0 0 0-.5.5v2a.5.5 0 0 0 .5.5h6a.5.5 0 0 0 .5-.5v-2a.5.5 0 0 0-.5-.5H5Z" /><path d="M2 5.5A1.5 1.5 0 0 0 .5 7v3.5A1.5 1.5 0 0 0 2 12h1.5a.5.5 0 0 0 0-1H2a.5.5 0 0 1-.5-.5V7a.5.5 0 0 1 .5-.5h12a.5.5 0 0 1 .5.5v3.5a.5.5 0 0 1-.5-.5h-1.5a.5.5 0 0 0 0 1H14a1.5 1.5 0 0 0 1.5-1.5V7A1.5 1.5 0 0 0 14 5.5H2Z" /><path d="M5 10a.5.5 0 0 0-.5.5v3a.5.5 0 0 0 .5.5h6a.5.5 0 0 0 .5-.5v-3a.5.5 0 0 0-.5-.5H5Z" /></svg>Imprimir</button>
-                <button data-id="${order.id}" class="delete-btn text-red-400 hover:text-red-300" title="Excluir Ordem"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="w-5 h-5"><path fill-rule="evenodd" d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3V3.25a.75.75 0 0 0-.75-.75h-1.5Z" clip-rule="evenodd" /></svg></button>
+                <button data-id="${order.id}" class="print-btn flex items-center gap-1 bg-gray-700 px-3 py-1 rounded-full text-sm font-semibold">Imprimir</button>
+                <button data-id="${order.id}" class="delete-btn text-red-400" title="Excluir Ordem"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5 3.25V4H2.75a.75.75 0 000 1.5h.3l.815 8.15A1.5 1.5 0 005.357 15h5.285a1.5 1.5 0 001.493-1.35l.815-8.15h.3a.75.75 0 000-1.5H11v-.75A2.25 2.25 0 008.75 1h-1.5A2.25 2.25 0 005 3.25zm2.25-.75a.75.75 0 00-.75.75V4h3V3.25a.75.75 0 00-.75-.75h-1.5z" clip-rule="evenodd" /></svg></button>
             </div>`;
         return card;
     }
 
-    // --- DELEGAÇÃO DE EVENTOS GERAL ---
     document.body.addEventListener('click', async (e) => {
-        const user = auth.currentUser;
-        if (!user) return;
-
         const finishBtn = e.target.closest('.finish-btn');
         const printBtn = e.target.closest('.print-btn');
         const deleteBtn = e.target.closest('.delete-btn');
-
         if (finishBtn) {
-            const orderId = finishBtn.dataset.id;
-            try {
-                await updateDoc(doc(db, 'orders', orderId), { status: 'finalizado', dataFinalizacao: Timestamp.fromDate(new Date()) });
-            } catch (error) { console.error("Erro ao finalizar ordem:", error); alert("Erro ao finalizar a ordem."); }
+            try { await updateDoc(doc(db, 'orders', finishBtn.dataset.id), { status: 'finalizado', dataFinalizacao: Timestamp.fromDate(new Date()) }); }
+            catch (error) { alert("Erro ao finalizar a ordem."); }
         }
-
         if (printBtn) {
-            const orderId = printBtn.dataset.id;
             try {
-                const docSnap = await getDoc(doc(db, 'orders', orderId));
-                if (docSnap.exists()) prepareAndPrintReceipt({ id: docSnap.id, ...docSnap.data() });
-            } catch (error) { console.error("Erro ao buscar ordem para impressão:", error); alert("Erro ao buscar dados para impressão."); }
+                const docSnap = await getDoc(doc(db, 'orders', printBtn.dataset.id));
+                if (docSnap.exists()) prepareAndPrintReceipt(docSnap.data());
+            } catch (error) { alert("Erro ao buscar dados para impressão."); }
         }
-
         if (deleteBtn) {
-            const orderId = deleteBtn.dataset.id;
-            showConfirm("Tem certeza que deseja excluir esta ordem de serviço?", async () => {
-                try {
-                    await deleteDoc(doc(db, 'orders', orderId));
-                } catch (error) { console.error("Erro ao excluir ordem:", error); alert("Erro ao excluir a ordem."); }
+            showConfirm("Tem certeza que deseja excluir esta ordem?", async () => {
+                try { await deleteDoc(doc(db, 'orders', deleteBtn.dataset.id)); }
+                catch (error) { alert("Erro ao excluir a ordem."); }
             });
         }
     });
     
     function prepareAndPrintReceipt(order) {
-        const today = new Date();
-        const day = today.getDate();
-        const month = today.toLocaleString('pt-BR', { month: 'long' });
-        const year = today.getFullYear();
-        const fullDate = `Florianópolis, ${day} de ${month} de ${year}.`;
-
+        const fullDate = new Date().toLocaleString('pt-BR', { dateStyle: 'long' });
         const termHTML = `
             <div style="font-family: Arial, sans-serif; width: 21cm; padding: 1.5cm; font-size: 10pt; color: #000; line-height: 1.4;">
                 <h2 style="text-align: center; font-weight: bold; font-size: 14pt;">TERMO DE RESPONSABILIDADE – CLEAN UP SHOES</h2>
-                <p style="text-align: center; font-size: 9pt; margin-bottom: 1.5em;">
-                    CNPJ: 51.192.646/0001-59<br>
-                    Endereço: Av. Gramal, 1521, sala 6 – Bairro Campeche, Florianópolis/SC<br>
-                    CEP: 88063-080
-                </p>
+                <p style="text-align: center; font-size: 9pt; margin-bottom: 1.5em;">CNPJ: 51.192.646/0001-59<br>Endereço: Av. Gramal, 1521, sala 6 – Bairro Campeche, Florianópolis/SC<br>CEP: 88063-080</p>
                 <p>Pelo presente instrumento, o(a) CLIENTE declara estar ciente e de acordo com os termos e condições abaixo ao contratar os serviços de limpeza e higienização de calçados da CLEAN UP SHOES.</p>
-                
                 <h3 style="font-weight: bold; margin-top: 1em; font-size: 11pt;">1. Avaliação Prévia</h3>
-                <p>Todos os calçados recebidos são submetidos a uma avaliação técnica inicial. Nesta análise, são verificados o estado geral do item, os materiais de sua composição, costuras, colas, solado e a existência de eventuais avarias ou desgastes pré-existentes.</p>
-                
+                <p>Todos os calçados recebidos são submetidos a uma avaliação técnica inicial...</p>
                 <h3 style="font-weight: bold; margin-top: 1em; font-size: 11pt;">2. Riscos Inerentes ao Processo de Limpeza</h3>
-                <p>O(A) CLIENTE compreende que, em virtude da grande diversidade de materiais, corantes e técnicas de fabricação de calçados, alguns riscos são inerentes ao processo de limpeza. Podem ocorrer alterações de cor, textura, desbotamento, descolamento ou a aceleração de um desgaste natural, especialmente em artigos delicados, antigos, com customizações ou que já apresentem danos.</p>
-                
+                <p>O(A) CLIENTE compreende que, em virtude da grande diversidade de materiais...</p>
                 <h3 style="font-weight: bold; margin-top: 1em; font-size: 11pt;">3. Garantia e Limitação de Responsabilidade</h3>
-                <p>A CLEAN UP SHOES compromete-se a empregar as melhores técnicas profissionais e produtos adequados para a execução dos serviços. Contudo, não se responsabiliza por danos decorrentes de fragilidades, vícios ocultos ou problemas pré-existentes no calçado, que não sejam passíveis de identificação na avaliação prévia.</p>
-                
+                <p>A CLEAN UP SHOES compromete-se a empregar as melhores técnicas...</p>
                 <h3 style="font-weight: bold; margin-top: 1em; font-size: 11pt;">4. Prazos e Retirada do Item</h3>
-                <p>O prazo estimado para a conclusão do serviço será informado no momento do recebimento do calçado. Após a notificação de término, o(a) CLIENTE terá o prazo de 30 (trinta) dias corridos para realizar a retirada do item. Findo este período, a CLEAN UP SHOES isenta-se de qualquer responsabilidade sobre a guarda e conservação do calçado.</p>
-                
+                <p>O prazo estimado para a conclusão do serviço será informado no momento do recebimento...</p>
                 <h3 style="font-weight: bold; margin-top: 1em; font-size: 11pt;">5. Objetos Pessoais</h3>
-                <p>A CLEAN UP SHOES não se responsabiliza por quaisquer objetos ou acessórios deixados nos calçados, tais como palmilhas ortopédicas ou especiais, cadarços personalizados, pingentes, etiquetas, entre outros. Recomenda-se a remoção de todos os itens pessoais antes da entrega do calçado.</p>
-                
+                <p>A CLEAN UP SHOES não se responsabiliza por quaisquer objetos ou acessórios deixados...</p>
                 <h3 style="font-weight: bold; margin-top: 1em; font-size: 11pt;">6. Autorização e Aceite</h3>
-                <p>Ao contratar o serviço e assinar este termo, o(a) CLIENTE autoriza a execução dos procedimentos de limpeza solicitados e confirma que leu, compreendeu e concorda integralmente com todas as cláusulas aqui descritas.</p>
-                
-                <p style="text-align: right; margin-top: 2em;">${fullDate}</p>
-
+                <p>Ao contratar o serviço e assinar este termo, o(a) CLIENTE autoriza a execução...</p>
+                <p style="text-align: right; margin-top: 2em;">Florianópolis, ${fullDate}</p>
                 <div style="margin-top: 3em;">
                     <p style="text-align: center;">_________________________________________</p>
                     <p style="text-align: center;">Assinatura do Cliente</p>
                     <p style="margin-top: 1.5em;"><strong>Nome Completo:</strong> ${order.nomeCliente}</p>
                     <p><strong>CPF/RG:</strong> ${order.cpfCliente || 'Não informado'}</p>
                 </div>
-            </div>
-        `;
-        
+            </div>`;
         printArea.innerHTML = termHTML;
         window.print();
     }
