@@ -703,75 +703,79 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     
     function getReceiptHtml(order) {
-        const fullDate = new Date().toLocaleString('pt-BR', { dateStyle: 'long' });
         const entryDate = (order.dataEntrada && order.dataEntrada.toDate) 
             ? new Intl.DateTimeFormat('pt-BR').format(order.dataEntrada.toDate())
             : 'N/A';
 
         const itemsHtml = (order.items || []).map(item => `
             <tr>
-                <td style="padding: 8px; border-bottom: 1px solid #ccc;">${item.service}</td>
-                <td style="padding: 8px; border-bottom: 1px solid #ccc;">${item.item}</td>
-                <td style="padding: 8px; border-bottom: 1px solid #ccc; text-align: right;">${new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(item.price || 0)}</td>
+                <td style="padding: 5px; border-bottom: 1px solid #eee;">${item.service}</td>
+                <td style="padding: 5px; border-bottom: 1px solid #eee;">${item.item}</td>
+                <td style="padding: 5px; border-bottom: 1px solid #eee; text-align: right;">${new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(item.price || 0)}</td>
             </tr>
         `).join('');
 
         return `
-            <div style="font-family: Arial, sans-serif; width: 21cm; padding: 1.5cm; font-size: 10pt; color: #000; line-height: 1.4; background: white;">
-                <div style="text-align: center; margin-bottom: 1.5em;">
-                    <img src="logo.png" alt="Clean UP Shoes Logo" style="width: 150px; margin: 0 auto;">
-                </div> <br>
-                <h2 style="text-align: center; font-weight: bold; font-size: 14pt;">TERMO DE RESPONSABILIDADE – CLEAN UP SHOES</h2> <br>
-                <p style="text-align: center; font-size: 9pt; margin-bottom: 1.5em;">CNPJ: 51.192.646/0001-59<br>Endereço: Av. Gramal, 1521, sala 6 - Bairro Campeche, Florianópolis/SC – CEP: 88063-080</p> <br>
-                <p>O cliente declara estar ciente e de acordo com os termos abaixo ao contratar os serviços da Clean Up Shoes:</p> <br>
-                <ol style="list-style-position: inside; padding-left: 0;">
-                    <li style="margin-bottom: 0.5em;"><strong>Avaliação Prévia:</strong> Todos os calçados recebidos passam por uma avaliação técnica, na qual são verificados o estado geral, materiais, costuras, colas, solado e eventuais avarias pré-existentes.</li> <br>
-                    <li style="margin-bottom: 0.5em;"><strong>Riscos do Processo:</strong> Devido à variedade de materiais e técnicas, podem ocorrer alterações de cor, textura, desbotamento, descolamento ou desgaste natural, especialmente em peças frágeis ou antigas.</li> <br>
-                    <li style="margin-bottom: 0.5em;"><strong>Garantia de Serviço:</strong> A Clean UP Shoes compromete-se a prestar o melhor serviço com produtos e técnicas profissionais, mas não se responsabiliza por danos ligados à fragilidade pré-existente do calçado.</li> <br>
-                    <li style="margin-bottom: 0.5em;"><strong>Prazos e Retirada:</strong> O prazo médio para entrega será informado no recebimento. O cliente deve retirar o calçado em até 30 dias corridos após notificação de conclusão. Após isso, isentamo-nos de responsabilidade.</li> <br>
-                    <li style="margin-bottom: 0.5em;"><strong>Objetos Pessoais:</strong> Não nos responsabilizamos por objetos deixados dentro dos calçados, como palmilhas, cadarços personalizados, etiquetas, etc.</li> <br>
-                    <li style="margin-bottom: 0.5em;"><strong>Autorização:</strong> Ao assinar este termo, o cliente autoriza a execução do serviço e declara estar ciente de todas as condições aqui descritas.</li> <br>
-                </ol>
-                <p style="text-align: right; margin-top: 2em;">Florianópolis, ${fullDate}</p>
-                <div style="margin-top: 3em;">
-                    <p style="text-align: center;">_________________________________________</p>
-                    <p style="text-align: center;">Assinatura do Cliente</p>
-                    <p style="margin-top: 1.5em;"><strong>Nome Completo:</strong> ${order.nomeCliente}</p>
-                    <p><strong>CPF/RG:</strong> ${order.cpfCliente || 'Não informado'}</p>
+            <div style="font-family: Arial, sans-serif; width: 100%; padding: 20px; font-size: 9pt; color: #000; line-height: 1.3; background: white;">
+                
+                <div style="text-align: center; margin-bottom: 1em;">
+                    <img src="logo.png" alt="Clean UP Shoes Logo" style="width: 120px; margin: 0 auto;">
                 </div>
-            </div>
-            <div style="font-family: Arial, sans-serif; width: 21cm; padding: 1.5cm; font-size: 10pt; color: #000; line-height: 1.4; page-break-before: always; background: white;">
-                <div style="text-align: center; margin-bottom: 1.5em;">
-                    <img src="logo.png" alt="Clean UP Shoes Logo" style="width: 150px; margin: 0 auto;">
+
+                <div style="text-align: center; margin-bottom: 1em;">
+                    <h2 style="font-weight: bold; font-size: 12pt; margin:0;">DETALHES DA ORDEM DE SERVIÇO</h2>
+                    <p style="font-size: 8pt; margin:0;">CNPJ: 51.192.646/0001-59 | Av. Gramal, 1521, sala 6 - Campeche, Florianópolis/SC</p>
                 </div>
-                <h2 style="text-align: center; font-weight: bold; font-size: 14pt;">DETALHES DA ORDEM DE SERVIÇO</h2>
-                <div style="margin-top: 2em; margin-bottom: 2em; border-bottom: 1px solid #ccc; padding-bottom: 1em;">
+
+                <div style="margin-bottom: 1em; border-bottom: 1px solid #ccc; padding-bottom: 0.5em;">
                     <p><strong>Cliente:</strong> ${order.nomeCliente}</p>
                     <p><strong>OS:</strong> ${order.id.substring(0, 6).toUpperCase()}</p>
                     <p><strong>Data de Entrada:</strong> ${entryDate}</p>
                     ${order.tagIdentificacao ? `<p><strong>Tag de Identificação:</strong> ${order.tagIdentificacao}</p>` : ''}
                 </div>
-                <table style="width: 100%; border-collapse: collapse;">
+
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 1em;">
                     <thead>
                         <tr>
-                            <th style="padding: 8px; border-bottom: 2px solid #000; text-align: left;">Serviço</th>
-                            <th style="padding: 8px; border-bottom: 2px solid #000; text-align: left;">Item</th>
-                            <th style="padding: 8px; border-bottom: 2px solid #000; text-align: right;">Valor</th>
+                            <th style="padding: 5px; border-bottom: 1px solid #000; text-align: left;">Serviço</th>
+                            <th style="padding: 5px; border-bottom: 1px solid #000; text-align: left;">Item</th>
+                            <th style="padding: 5px; border-bottom: 1px solid #000; text-align: right;">Valor</th>
                         </tr>
                     </thead>
                     <tbody>
                         ${itemsHtml}
                     </tbody>
                 </table>
-                <div style="margin-top: 2em; text-align: right;">
-                    <p style="font-size: 14pt; font-weight: bold;">VALOR TOTAL: ${new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(order.valorTotal || 0)}</p>
+
+                <div style="text-align: right; margin-bottom: 1em;">
+                    <p style="font-size: 11pt; font-weight: bold;">VALOR TOTAL: ${new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(order.valorTotal || 0)}</p>
                 </div>
+                
                 ${order.observacoes ? `
-                    <div style="margin-top: 2em;">
-                        <h3 style="font-weight: bold;">Observações:</h3>
+                    <div style="margin-top: 1em; margin-bottom: 1em;">
+                        <h3 style="font-weight: bold; font-size: 9pt;">Observações:</h3>
                         <p>${order.observacoes}</p>
                     </div>
                 ` : ''}
+
+                <div style="margin-top: 2em; padding-top: 1em; border-top: 1px dashed #ccc;">
+                    <div style="font-size: 7pt; line-height: 1.2;">
+                        <h3 style="text-align: center; font-weight: bold; font-size: 8pt;">TERMO DE RESPONSABILIDADE – CLEAN UP SHOES</h3>
+                        <p>O cliente declara estar ciente e de acordo com os termos abaixo ao contratar os serviços da Clean Up Shoes:</p>
+                        <ol style="list-style-position: inside; padding-left: 0; margin: 0.5em 0;">
+                            <li style="margin-bottom: 0.3em;"><strong>Avaliação Prévia:</strong> Todos os calçados recebidos passam por uma avaliação técnica, verificando estado geral e avarias pré-existentes.</li>
+                            <li style="margin-bottom: 0.3em;"><strong>Riscos do Processo:</strong> Podem ocorrer alterações de cor, textura, desbotamento ou desgaste natural, especialmente em peças frágeis ou antigas.</li>
+                            <li style="margin-bottom: 0.3em;"><strong>Garantia de Serviço:</strong> A Clean UP Shoes compromete-se a prestar o melhor serviço, mas não se responsabiliza por danos ligados à fragilidade pré-existente do calçado.</li>
+                            <li style="margin-bottom: 0.3em;"><strong>Prazos e Retirada:</strong> O cliente deve retirar o calçado em até 30 dias corridos após notificação de conclusão. Após isso, isentamo-nos de responsabilidade.</li>
+                            <li style="margin-bottom: 0.3em;"><strong>Objetos Pessoais:</strong> Não nos responsabilizamos por objetos deixados dentro dos calçados.</li>
+                            <li style="margin-bottom: 0.3em;"><strong>Autorização:</strong> Ao assinar este termo, o cliente autoriza a execução do serviço e declara estar ciente de todas as condições aqui descritas.</li>
+                        </ol>
+                    </div>
+                    <div style="margin-top: 2em;">
+                        <p style="text-align: center;">_________________________________________</p>
+                        <p style="text-align: center; font-size: 8pt;">${order.nomeCliente}</p>
+                    </div>
+                </div>
             </div>
         `;
     }
