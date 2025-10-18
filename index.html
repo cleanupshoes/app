@@ -164,18 +164,16 @@
             </form>
         </div>
     </div>
+
     <div id="finish-order-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center z-50 p-4">
-        <div class="bg-gray-800 border border-emerald-500/20 rounded-2xl shadow-2xl p-8 w-full max-w-md transform transition-all scale-95 opacity-0" id="finish-order-modal-content">
+        <div class="bg-gray-800 border border-emerald-500/20 rounded-2xl shadow-2xl p-8 w-full max-w-lg transform transition-all scale-95 opacity-0" id="finish-order-modal-content">
             <h3 class="text-xl font-bold text-gray-200">Finalizar Ordem de Serviço</h3>
-            <p class="text-gray-400 mt-4">Por favor, informe quem realizou este serviço.</p>
-            <form id="finish-order-form" class="space-y-4 mt-4">
-                <div>
-                    <label for="technician-name" class="block text-sm font-medium text-gray-400">Nome do Responsável</label>
-                    <input type="text" id="technician-name" required class="w-full px-4 py-2 mt-1 text-gray-200 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                </div>
-                <div class="flex justify-end pt-6 gap-4">
+            <p class="text-gray-400 mt-2 mb-4">Informe quem realizou cada serviço listado abaixo.</p>
+            <form id="finish-order-form">
+                <div id="finish-order-items-container" class="space-y-4 max-h-80 overflow-y-auto pr-2"></div>
+                <div class="flex justify-end pt-6 gap-4 mt-6 border-t border-gray-700">
                     <button type="button" id="finish-cancel-btn" class="bg-gray-600 text-gray-200 px-6 py-2 rounded-lg hover:bg-gray-500 font-semibold">Cancelar</button>
-                    <button type="submit" class="btn-gradient text-gray-900 px-6 py-2 rounded-lg hover:opacity-90 font-semibold">Confirmar</button>
+                    <button type="submit" class="btn-gradient text-gray-900 px-6 py-2 rounded-lg hover:opacity-90 font-semibold">Confirmar Finalização</button>
                 </div>
             </form>
         </div>
