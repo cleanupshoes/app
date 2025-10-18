@@ -53,6 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const commissionToggleBtn = document.getElementById('commission-toggle-btn');
     const servicesLink = document.getElementById('services-link');
     const mainContent = document.querySelector('main');
+    const expenseDateInput = document.getElementById('expense-date');
     
     // Modal de Confirmação
     const confirmModal = document.getElementById('confirm-modal');
@@ -73,16 +74,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- AUTENTICAÇÃO E CARREGAMENTO INICIAL ---
     onAuthStateChanged(auth, async (user) => {
         if (user) {
-            // Usuário está logado, vamos verificar sua permissão
             const userDocRef = doc(db, "users", user.uid);
             const userDocSnap = await getDoc(userDocRef);
             
-            let userRole = 'colaborador'; // Permissão padrão
+            let userRole = 'colaborador';
             if (userDocSnap.exists()) {
                 userRole = userDocSnap.data().role;
             }
 
-            // VERIFICAÇÃO DE PERMISSÃO E DISPOSITIVO
             const isMobile = window.innerWidth <= 768;
 
             if (userRole === 'admin') {
@@ -98,7 +97,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
         } else {
-            // Se não estiver logado, redireciona para a página principal
             window.location.href = 'index.html';
         }
     });
@@ -126,21 +124,25 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         const description = document.getElementById('expense-description').value;
         const value = parseFloat(document.getElementById('expense-value').value);
+        const dateValue = expenseDateInput.value;
 
-        if (!description || !value) {
-            return alert("Por favor, preencha a descrição e o valor da despesa.");
+        if (!description || !value || !dateValue) {
+            return alert("Por favor, preencha a data, a descrição e o valor da despesa.");
         }
+
+        const expenseDate = new Date(dateValue + 'T00:00:00');
 
         const newExpenseData = {
             description,
             value,
-            date: Timestamp.fromDate(new Date()),
+            date: Timestamp.fromDate(expenseDate),
             ownerId: companyId
         };
 
         try {
             await addDoc(collection(db, "expenses"), newExpenseData);
             newExpenseForm.reset();
+            expenseDateInput.value = new Date().toISOString().split('T')[0];
         } catch (error) {
             console.error("Erro ao salvar despesa:", error);
             alert("Erro ao salvar despesa.");
@@ -162,6 +164,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const today = new Date().toISOString().split('T')[0];
         startDateInput.value = today;
         endDateInput.value = today;
+        if (expenseDateInput) {
+            expenseDateInput.value = today;
+        }
     }
 
     function updateDashboard() {
