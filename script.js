@@ -96,12 +96,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const confirmCancelBtn = document.getElementById('confirm-cancel-btn');
     const confirmOkBtn = document.getElementById('confirm-ok-btn');
     
-    // Modal de Finalização
+    // Modal de Finalização (ATUALIZADO)
     const finishOrderModal = document.getElementById('finish-order-modal');
     const finishOrderModalContent = document.getElementById('finish-order-modal-content');
     const finishOrderForm = document.getElementById('finish-order-form');
     const finishCancelBtn = document.getElementById('finish-cancel-btn');
-    const technicianNameInput = document.getElementById('technician-name');
+    const finishOrderItemsContainer = document.getElementById('finish-order-items-container');
 
     const dashboardLink = document.getElementById('dashboard-link');
 
@@ -115,7 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let unsubscribeFromServices = null;
     let confirmCallback = null;
     let orderIdToFinish = null;
-    let currentUserRole = null; // Variável para guardar a permissão do usuário
+    let currentUserRole = null; 
 
     // --- LÓGICA DE AUTENTICAÇÃO E PERMISSÕES ---
     onAuthStateChanged(auth, async (user) => {
@@ -284,9 +284,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // --- LÓGICA DO FORMULÁRIO DE NOVA ORDEM / EDIÇÃO ---
-    
-    // ✅ CORREÇÃO APLICADA AQUI ✅
-    // Função mais segura para limpar o formulário, verificando se cada elemento existe
     function resetNewOrderForm() {
         if (newOrderForm) newOrderForm.reset();
         if (editingOrderIdInput) editingOrderIdInput.value = '';
@@ -301,7 +298,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         if (serviceItemsContainer) {
             serviceItemsContainer.innerHTML = '';
-            addServiceItem(); // Adiciona o primeiro item de serviço
+            addServiceItem();
         }
     }
     
@@ -432,7 +429,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 orderData.dataEntrada = Timestamp.fromDate(new Date());
                 orderData.dataFinalizacao = null;
                 orderData.status = 'em_aberto';
-                orderData.finalizadoPor = null;
+                orderData.finalizadoPor = []; // (ATUALIZADO) Inicia como array vazio
                 await addDoc(collection(db, "orders"), orderData);
             }
             closeModal(newOrderModal, modalContent);
@@ -486,14 +483,23 @@ document.addEventListener('DOMContentLoaded', () => {
             : 'N/A';
 
         const formattedValue = new Intl.NumberFormat('pt-BR', {style: 'currency', currency: 'BRL'}).format(order.valorTotal || 0);
-        const itemsHtml = (order.items || []).map(item => `<div class="flex justify-between text-sm"><p>${item.service} (${item.item})</p><p>${new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(item.price || 0)}</p></div>`).join('');
+        
+        // (ATUALIZADO) Mostra o responsável por item, se houver
+        const itemsHtml = (order.items || []).map(item => {
+            const technicianNote = item.finalizadoPor ? ` <span class="text-gray-500 font-light">- ${item.finalizadoPor}</span>` : '';
+            return `<div class="flex justify-between text-sm">
+                        <p>${item.service} (${item.item})${technicianNote}</p>
+                        <p>${new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(item.price || 0)}</p>
+                    </div>`;
+        }).join('');
         
         const paymentStatusText = (order.paymentStatus === 'pago') ? 'Pago' : 'Pendente';
         const paymentStatusClass = (order.paymentStatus === 'pago') ? 'bg-green-500/20 text-green-400' : 'bg-yellow-500/20 text-yellow-400';
         const paymentStatusHtml = `<span class="px-2 py-1 text-xs font-semibold rounded-full ${paymentStatusClass}">${paymentStatusText}</span>`;
 
-        const technicianInfo = order.status === 'finalizado' && order.finalizadoPor
-            ? ` &bull; <span class="font-semibold">Finalizado por: ${order.finalizadoPor}</span>`
+        // (ATUALIZADO) Mostra a lista de todos os responsáveis
+        const technicianInfo = order.status === 'finalizado' && Array.isArray(order.finalizadoPor) && order.finalizadoPor.length > 0
+            ? ` &bull; <span class="font-semibold">Finalizado por: ${order.finalizadoPor.join(', ')}</span>`
             : '';
             
         const tagHtml = order.tagIdentificacao ? ` &bull; <span>Tag: ${order.tagIdentificacao}</span>` : '';
@@ -589,11 +595,27 @@ document.addEventListener('DOMContentLoaded', () => {
             catch (error) { alert("Erro ao atualizar o status do pagamento."); }
         }
 
+        // (ATUALIZADO) Lógica para abrir o novo modal de finalização
         if (finishBtn) {
             orderIdToFinish = finishBtn.dataset.id;
-            if (technicianNameInput) technicianNameInput.value = '';
-            openModal(finishOrderModal, finishOrderModalContent);
-            if (technicianNameInput) technicianNameInput.focus();
+            const orderData = allOrdersCache.find(o => o.id === orderIdToFinish);
+            
+            if (orderData && finishOrderItemsContainer) {
+                finishOrderItemsContainer.innerHTML = '';
+                
+                orderData.items.forEach((item, index) => {
+                    const itemHtml = `
+                        <div class="bg-gray-700/50 p-3 rounded-lg">
+                            <p class="text-gray-300 font-semibold">${item.service} - ${item.item}</p>
+                            <label for="technician-name-${index}" class="block text-sm font-medium text-gray-400 mt-2">Responsável</label>
+                            <input type="text" id="technician-name-${index}" data-item-index="${index}" required class="technician-input w-full px-4 py-2 mt-1 text-gray-200 bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        </div>
+                    `;
+                    finishOrderItemsContainer.innerHTML += itemHtml;
+                });
+
+                openModal(finishOrderModal, finishOrderModalContent);
+            }
         }
 
         if (printBtn) {
@@ -626,22 +648,54 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // (ATUALIZADO) Lógica para salvar os múltiplos responsáveis
     if (finishOrderForm) {
         finishOrderForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const technicianName = technicianNameInput ? technicianNameInput.value : '';
-            if (!technicianName.trim()) return alert("O nome do responsável é obrigatório.");
             
             if (orderIdToFinish) {
+                const orderData = allOrdersCache.find(o => o.id === orderIdToFinish);
+                if (!orderData) {
+                    alert("Erro: Ordem não encontrada.");
+                    return;
+                }
+
+                const technicianInputs = finishOrderItemsContainer.querySelectorAll('.technician-input');
+                const updatedItems = [...orderData.items];
+                const technicianNames = new Set(); 
+
+                let allFieldsFilled = true;
+                technicianInputs.forEach(input => {
+                    const itemIndex = parseInt(input.dataset.itemIndex, 10);
+                    const technicianName = input.value.trim();
+
+                    if (!technicianName) {
+                        allFieldsFilled = false;
+                    }
+                    
+                    updatedItems[itemIndex].finalizadoPor = technicianName;
+                    if(technicianName) {
+                        technicianNames.add(technicianName);
+                    }
+                });
+
+                if (!allFieldsFilled) {
+                    return alert("Por favor, informe o responsável por cada item.");
+                }
+
+                const finalizadoPorArray = Array.from(technicianNames);
+
                 try {
                     await updateDoc(doc(db, 'orders', orderIdToFinish), {
                         status: 'finalizado',
                         dataFinalizacao: Timestamp.fromDate(new Date()),
-                        finalizadoPor: technicianName
+                        items: updatedItems,
+                        finalizadoPor: finalizadoPorArray
                     });
                     closeModal(finishOrderModal, finishOrderModalContent);
                     orderIdToFinish = null;
                 } catch (error) {
+                    console.error("Erro ao finalizar a ordem:", error);
                     alert("Erro ao finalizar a ordem.");
                 }
             }
